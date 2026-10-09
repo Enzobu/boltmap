@@ -1,0 +1,10 @@
+# Project-scoped Codex configuration.
+# Personal values and secrets belong in user config or a gitignored local file.
+
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+model_reasoning_effort = "high"
+web_search = "cached"
+multi_agent = true
+project_doc_max_bytes = 32768
+project_doc_fallback_filenames = ["TEAM_GUIDE.md", ".agents.md"]
