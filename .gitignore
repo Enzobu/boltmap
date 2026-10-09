@@ -8,3 +8,4 @@ node_modules/
 coverage/
 *.tsbuildinfo
 npm-debug.log*
+volume_database/

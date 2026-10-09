@@ -8,7 +8,7 @@ services:
       MARIADB_PASSWORD: ${MYSQL_PASSWORD}
       MARIADB_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
     volumes:
-      - mariadb_data:/var/lib/mysql
+      - ${DATABASE_VOLUME:-./volume_database}:/var/lib/mysql
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 5s
@@ -27,6 +27,3 @@ services:
         condition: service_healthy
     ports:
       - "${APP_PORT:-3000}:3000"
-
-volumes:
-  mariadb_data:
