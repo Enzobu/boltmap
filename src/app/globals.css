@@ -865,6 +865,9 @@ a {
     position: fixed;
     left: 0;
     width: min(292px, 88vw);
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow-y: auto;
     transform: translateX(-102%);
     transition: transform 180ms ease;
     box-shadow: var(--shadow);
