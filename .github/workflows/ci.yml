@@ -7,14 +7,27 @@ on:
       - "feat/**"
       - "fix/**"
       - "refactor/**"
+      - "ci/**"
   pull_request:
 
 permissions:
   contents: read
 
 jobs:
-  quality:
+  build:
+    name: Build Docker image
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build --tag boltmap:ci .
+
+  quality:
+    name: Quality
+    runs-on: ubuntu-latest
+    needs: build
     env:
       DATABASE_URL: mysql://boltmap:boltmap@127.0.0.1:3306/boltmap
       AUTH_SECRET: ci-only-secret-that-is-long-enough-for-tests
@@ -45,7 +58,9 @@ jobs:
   deploy-prod:
     name: Deploy prod
     runs-on: ubuntu-latest
-    needs: quality
+    needs:
+      - build
+      - quality
     if: github.ref == 'refs/heads/main'
     steps:
       - name: Deploy prod
