@@ -3,3 +3,8 @@
 !.env.example
 .claude/settings.local.json
 .codex/settings.local.toml
+node_modules/
+.next/
+coverage/
+*.tsbuildinfo
+npm-debug.log*
