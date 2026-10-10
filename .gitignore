@@ -9,3 +9,4 @@ coverage/
 *.tsbuildinfo
 npm-debug.log*
 volume_database/
+volume_images/
