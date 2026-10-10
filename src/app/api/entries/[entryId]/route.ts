@@ -3,6 +3,7 @@ import { requireUserId } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { entryPatchSchema } from "@/lib/validation";
 import { notFound, unauthorized, validationError } from "@/lib/api";
+import { removeStoredImages } from "@/lib/images";
 
 type Context = {
   params: Promise<{ entryId: string }>;
@@ -51,6 +52,12 @@ export async function PATCH(
   const entry = await db.entry.update({
     where: { id: entryId },
     data,
+    include: {
+      images: {
+        select: { id: true, position: true },
+        orderBy: { position: "asc" },
+      },
+    },
   });
 
   return NextResponse.json({ entry });
@@ -72,6 +79,13 @@ export async function DELETE(
     return notFound("Entry not found.");
   }
 
+  const images = await db.entryImage.findMany({
+    where: { entryId },
+    select: { storageKey: true },
+  });
+
   await db.entry.delete({ where: { id: entryId } });
+  await removeStoredImages(images.map((image) => image.storageKey));
+
   return NextResponse.json({ ok: true });
 }
