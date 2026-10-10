@@ -1,4 +1,11 @@
 services:
+  image-volume-init:
+    image: alpine:3.20
+    restart: "no"
+    volumes:
+      - ${IMAGE_VOLUME:-./volume_images}:/uploads
+    command: ["sh", "-c", "mkdir -p /uploads && chown -R 1001:1001 /uploads"]
+
   db:
     image: mariadb:11.4
     restart: unless-stopped
@@ -23,7 +30,11 @@ services:
       AUTH_SECRET: ${AUTH_SECRET}
       NODE_ENV: production
     depends_on:
+      image-volume-init:
+        condition: service_completed_successfully
       db:
         condition: service_healthy
+    volumes:
+      - ${IMAGE_VOLUME:-./volume_images}:/app/uploads
     ports:
       - "${APP_PORT:-3000}:3000"
