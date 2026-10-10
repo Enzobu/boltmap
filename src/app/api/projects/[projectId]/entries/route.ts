@@ -37,6 +37,12 @@ export async function GET(
 
   const entries = await db.entry.findMany({
     where: { projectId },
+    include: {
+      images: {
+        select: { id: true, position: true },
+        orderBy: { position: "asc" },
+      },
+    },
     orderBy: { createdAt: "desc" },
   });
 
@@ -75,6 +81,12 @@ export async function POST(
           name: parsed.data.name,
           quantity: parsed.data.quantity,
           notes: parsed.data.notes || null,
+        },
+        include: {
+          images: {
+            select: { id: true, position: true },
+            orderBy: { position: "asc" },
+          },
         },
       });
 
