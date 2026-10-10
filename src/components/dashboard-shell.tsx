@@ -586,7 +586,11 @@ export function DashboardShell({ userEmail }: { userEmail: string }) {
           submitLabel="Générer le code"
           onClose={() => setModal(null)}
           onSubmit={async (payload) => {
-            const { images, deletedImageIds: _deletedImageIds, ...entryPayload } = payload;
+            const entryPayload = {
+              name: payload.name,
+              quantity: payload.quantity,
+              notes: payload.notes,
+            };
             const data = await requestJson<{ entry: Entry }>(
               `/api/projects/${activeProject.id}/entries`,
               {
@@ -597,7 +601,7 @@ export function DashboardShell({ userEmail }: { userEmail: string }) {
             );
 
             try {
-              const uploadedImages = await uploadEntryImages(data.entry.id, images);
+              const uploadedImages = await uploadEntryImages(data.entry.id, payload.images);
               const entry = { ...data.entry, images: uploadedImages };
               setEntries((current) => [entry, ...current]);
               updateProjectCount(1);
