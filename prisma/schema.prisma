@@ -37,8 +37,22 @@ model Entry {
   projectId String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project   Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  images    EntryImage[]
 
   @@unique([projectId, code])
   @@index([projectId, name])
+}
+
+model EntryImage {
+  id         String   @id @default(cuid())
+  entryId    String
+  storageKey String   @unique @db.VarChar(255)
+  mimeType   String   @db.VarChar(64)
+  size       Int
+  position   Int      @default(0)
+  createdAt  DateTime @default(now())
+  entry      Entry    @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@index([entryId, position])
 }
