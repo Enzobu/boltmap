@@ -6,6 +6,8 @@ import {
   ChevronRight,
   Clipboard,
   FolderPlus,
+  Images,
+  Camera,
   LogOut,
   Menu,
   MoreHorizontal,
@@ -20,7 +22,9 @@ import { useRouter } from "next/navigation";
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
+  type ChangeEvent,
   type FormEvent,
   type ReactNode,
 } from "react";
@@ -44,6 +48,15 @@ type Entry = {
   projectId: string;
   createdAt: string;
   updatedAt: string;
+  images: Array<{ id: string; position: number }>;
+};
+
+type EntryFormPayload = {
+  name: string;
+  quantity: number;
+  notes: string;
+  images: File[];
+  deletedImageIds: string[];
 };
 
 type ModalState =
@@ -52,6 +65,7 @@ type ModalState =
   | { type: "delete-project"; project: Project }
   | { type: "new-entry" }
   | { type: "edit-entry"; entry: Entry }
+  | { type: "gallery-entry"; entry: Entry }
   | { type: "delete-entry"; entry: Entry }
   | null;
 
@@ -69,6 +83,27 @@ async function requestJson<T>(
   }
 
   return data;
+}
+
+async function uploadEntryImages(
+  entryId: string,
+  images: readonly File[],
+): Promise<Array<{ id: string; position: number }>> {
+  if (images.length === 0) {
+    return [];
+  }
+
+  const formData = new FormData();
+  images.forEach((image) => formData.append("images", image));
+
+  const data = await requestJson<{
+    images: Array<{ id: string; position: number }>;
+  }>(`/api/entries/${entryId}/images`, {
+    method: "POST",
+    body: formData,
+  });
+
+  return data.images;
 }
 
 export function DashboardShell({ userEmail }: { userEmail: string }) {
@@ -444,6 +479,18 @@ export function DashboardShell({ userEmail }: { userEmail: string }) {
                         {entry.notes || <span className="muted">—</span>}
                       </div>
                       <div className="entry-row__actions">
+                        {entry.images.length > 0 ? (
+                          <button
+                            className="image-count-button"
+                            type="button"
+                            onClick={() => setModal({ type: "gallery-entry", entry })}
+                            aria-label={`Voir ${entry.images.length} photo(s) de ${entry.name}`}
+                            title="Voir les photos"
+                          >
+                            <Images size={15} />
+                            {entry.images.length}
+                          </button>
+                        ) : null}
                         <button
                           className="icon-button"
                           type="button"
@@ -539,18 +586,33 @@ export function DashboardShell({ userEmail }: { userEmail: string }) {
           submitLabel="Générer le code"
           onClose={() => setModal(null)}
           onSubmit={async (payload) => {
+            const entryPayload = {
+              name: payload.name,
+              quantity: payload.quantity,
+              notes: payload.notes,
+            };
             const data = await requestJson<{ entry: Entry }>(
               `/api/projects/${activeProject.id}/entries`,
               {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload),
+                body: JSON.stringify(entryPayload),
               },
             );
-            setEntries((current) => [data.entry, ...current]);
-            updateProjectCount(1);
-            setNotice(data.entry);
-            setModal(null);
+
+            try {
+              const uploadedImages = await uploadEntryImages(data.entry.id, payload.images);
+              const entry = { ...data.entry, images: uploadedImages };
+              setEntries((current) => [entry, ...current]);
+              updateProjectCount(1);
+              setNotice(entry);
+              setModal(null);
+            } catch (caught) {
+              await requestJson(`/api/entries/${data.entry.id}`, {
+                method: "DELETE",
+              }).catch(() => undefined);
+              throw caught;
+            }
           }}
         />
       ) : null}
@@ -562,22 +624,44 @@ export function DashboardShell({ userEmail }: { userEmail: string }) {
           entry={modal.entry}
           onClose={() => setModal(null)}
           onSubmit={async (payload) => {
+            const { images, deletedImageIds, ...entryPayload } = payload;
             const data = await requestJson<{ entry: Entry }>(
               `/api/entries/${modal.entry.id}`,
               {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload),
+                body: JSON.stringify(entryPayload),
               },
             );
+
+            await Promise.all(
+              deletedImageIds.map((imageId) =>
+                requestJson(`/api/images/${imageId}`, { method: "DELETE" }),
+              ),
+            );
+
+            const uploadedImages = await uploadEntryImages(modal.entry.id, images);
+            const deletedIds = new Set(deletedImageIds);
+            const retainedImages = data.entry.images.filter(
+              (image) => !deletedIds.has(image.id),
+            );
+            const entry = {
+              ...data.entry,
+              images: uploadedImages.length > 0 ? uploadedImages : retainedImages,
+            };
+
             setEntries((current) =>
-              current.map((entry) =>
-                entry.id === data.entry.id ? data.entry : entry,
+              current.map((currentEntry) =>
+                currentEntry.id === entry.id ? entry : currentEntry,
               ),
             );
             setModal(null);
           }}
         />
+      ) : null}
+
+      {modal?.type === "gallery-entry" ? (
+        <GalleryModal entry={modal.entry} onClose={() => setModal(null)} />
       ) : null}
 
       {modal?.type === "delete-entry" ? (
@@ -706,15 +790,53 @@ function EntryModal({
   title: string;
   submitLabel: string;
   entry?: Entry;
-  onSubmit: (payload: {
-    name: string;
-    quantity: number;
-    notes: string;
-  }) => Promise<void>;
+  onSubmit: (payload: EntryFormPayload) => Promise<void>;
   onClose: () => void;
 }) {
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [deletedImageIds, setDeletedImageIds] = useState<string[]>([]);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+
+  const selectedPreviews = useMemo(
+    () =>
+      selectedFiles.map((file) => ({
+        file,
+        url: URL.createObjectURL(file),
+      })),
+    [selectedFiles],
+  );
+
+  useEffect(() => {
+    return () => {
+      selectedPreviews.forEach((preview) => URL.revokeObjectURL(preview.url));
+    };
+  }, [selectedPreviews]);
+
+  const existingImages =
+    entry?.images.filter((image) => !deletedImageIds.includes(image.id)) ?? [];
+  const imageCount = existingImages.length + selectedFiles.length;
+
+  function addImages(event: ChangeEvent<HTMLInputElement>) {
+    const incoming = Array.from(event.target.files ?? []);
+    event.target.value = "";
+
+    if (incoming.length === 0) {
+      return;
+    }
+
+    const remaining = 10 - imageCount;
+
+    if (remaining <= 0 || incoming.length > remaining) {
+      setError("Maximum 10 images par entrée.");
+      return;
+    }
+
+    setError("");
+    setSelectedFiles((current) => [...current, ...incoming]);
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -728,6 +850,8 @@ function EntryModal({
         name: String(formData.get("name") ?? ""),
         quantity: Number(formData.get("quantity") ?? 1),
         notes: String(formData.get("notes") ?? ""),
+        images: selectedFiles,
+        deletedImageIds,
       });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Action impossible.");
@@ -773,6 +897,90 @@ function EntryModal({
           />
         </label>
 
+        <div className="photo-field">
+          <div className="photo-field__heading">
+            <span>Photos <em>optionnel</em></span>
+            <span>{imageCount}/10</span>
+          </div>
+
+          <input
+            ref={galleryInputRef}
+            className="file-input"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            multiple
+            onChange={addImages}
+          />
+          <input
+            ref={cameraInputRef}
+            className="file-input"
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={addImages}
+          />
+
+          <div className="photo-actions">
+            <button
+              className="button button--quiet"
+              type="button"
+              disabled={imageCount >= 10}
+              onClick={() => galleryInputRef.current?.click()}
+            >
+              <Images size={15} />
+              Ajouter
+            </button>
+            <button
+              className="button button--quiet"
+              type="button"
+              disabled={imageCount >= 10}
+              onClick={() => cameraInputRef.current?.click()}
+            >
+              <Camera size={15} />
+              Prendre une photo
+            </button>
+          </div>
+
+          {imageCount > 0 ? (
+            <div className="photo-previews">
+              {existingImages.map((image) => (
+                <div className="photo-preview" key={image.id}>
+                  <img src={`/api/images/${image.id}`} alt="" />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setDeletedImageIds((current) => [...current, image.id])
+                    }
+                    aria-label="Supprimer cette photo"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+              {selectedPreviews.map((preview) => (
+                <div className="photo-preview" key={preview.url}>
+                  <img src={preview.url} alt="" />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSelectedFiles((current) =>
+                        current.filter((file) => file !== preview.file),
+                      )
+                    }
+                    aria-label="Retirer cette photo"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="photo-field__hint">
+              Jusqu’à 10 JPEG, PNG ou WebP · 10 Mo max par image.
+            </p>
+          )}
+        </div>
+
         {error ? <p className="form-error">{error}</p> : null}
 
         <div className="modal__actions">
@@ -785,6 +993,35 @@ function EntryModal({
           </button>
         </div>
       </form>
+    </Modal>
+  );
+}
+
+function GalleryModal({
+  entry,
+  onClose,
+}: {
+  entry: Entry;
+  onClose: () => void;
+}) {
+  return (
+    <Modal title={`Photos · ${entry.code}`} onClose={onClose}>
+      <div className="modal__body">
+        <div className="gallery-grid">
+          {entry.images.map((image, index) => (
+            <a
+              key={image.id}
+              href={`/api/images/${image.id}`}
+              target="_blank"
+              rel="noreferrer"
+              className="gallery-image"
+              aria-label={`Ouvrir la photo ${index + 1}`}
+            >
+              <img src={`/api/images/${image.id}`} alt="" />
+            </a>
+          ))}
+        </div>
+      </div>
     </Modal>
   );
 }

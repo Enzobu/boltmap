@@ -3,6 +3,7 @@ import { requireUserId } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { projectSchema } from "@/lib/validation";
 import { notFound, unauthorized, validationError } from "@/lib/api";
+import { removeStoredImages } from "@/lib/images";
 
 type Context = {
   params: Promise<{ projectId: string }>;
@@ -60,13 +61,28 @@ export async function DELETE(
   }
 
   const { projectId } = await context.params;
-  const result = await db.project.deleteMany({
+  const project = await db.project.findFirst({
     where: { id: projectId, userId },
+    select: {
+      id: true,
+      entries: {
+        select: {
+          images: { select: { storageKey: true } },
+        },
+      },
+    },
   });
 
-  if (result.count === 0) {
+  if (!project) {
     return notFound("Project not found.");
   }
+
+  const storageKeys = project.entries.flatMap((entry) =>
+    entry.images.map((image) => image.storageKey),
+  );
+
+  await db.project.delete({ where: { id: project.id } });
+  await removeStoredImages(storageKeys);
 
   return NextResponse.json({ ok: true });
 }
