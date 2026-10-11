@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { filterEntries } from "@/lib/entries";
+import { filterEntries, filterEntriesByArchiveState } from "@/lib/entries";
 
 const entries = [
   { code: "4681", name: "Cache sous berceau" },
@@ -18,5 +18,24 @@ describe("filterEntries", () => {
 
   it("filters by name case-insensitively", () => {
     expect(filterEntries(entries, "ALTERNATEUR")).toEqual([entries[2]]);
+  });
+});
+
+describe("filterEntriesByArchiveState", () => {
+  const archivedEntries = [
+    { code: "1111", name: "Active", archivedAt: null },
+    { code: "2222", name: "Archived", archivedAt: "2026-10-11T10:00:00.000Z" },
+  ];
+
+  it("returns only active entries", () => {
+    expect(filterEntriesByArchiveState(archivedEntries, false)).toEqual([
+      archivedEntries[0],
+    ]);
+  });
+
+  it("returns only archived entries", () => {
+    expect(filterEntriesByArchiveState(archivedEntries, true)).toEqual([
+      archivedEntries[1],
+    ]);
   });
 });

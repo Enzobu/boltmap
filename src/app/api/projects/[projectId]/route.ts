@@ -43,7 +43,11 @@ export async function PATCH(
       name: true,
       createdAt: true,
       updatedAt: true,
-      _count: { select: { entries: true } },
+      _count: {
+        select: {
+          entries: { where: { archivedAt: null } },
+        },
+      },
     },
   });
 

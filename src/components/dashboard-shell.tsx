@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  Archive,
+  ArchiveRestore,
   Bolt,
   Check,
   ChevronRight,
@@ -29,7 +31,7 @@ import {
   type ReactNode,
 } from "react";
 import { ThemeSwitch } from "@/components/theme-switch";
-import { filterEntries } from "@/lib/entries";
+import { filterEntries, filterEntriesByArchiveState } from "@/lib/entries";
 
 type Project = {
   id: string;
@@ -48,8 +50,11 @@ type Entry = {
   projectId: string;
   createdAt: string;
   updatedAt: string;
+  archivedAt: string | null;
   images: Array<{ id: string; position: number }>;
 };
+
+type EntryView = "active" | "archived";
 
 type EntryFormPayload = {
   name: string;
@@ -66,6 +71,7 @@ type ModalState =
   | { type: "new-entry" }
   | { type: "edit-entry"; entry: Entry }
   | { type: "gallery-entry"; entry: Entry }
+  | { type: "archive-entry"; entry: Entry }
   | { type: "delete-entry"; entry: Entry }
   | null;
 
@@ -111,6 +117,7 @@ export function DashboardShell({ userEmail }: { userEmail: string }) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [activeProjectId, setActiveProjectId] = useState("");
   const [entries, setEntries] = useState<Entry[]>([]);
+  const [entryView, setEntryView] = useState<EntryView>("active");
   const [query, setQuery] = useState("");
   const [loadingProjects, setLoadingProjects] = useState(true);
   const [loadingEntries, setLoadingEntries] = useState(false);
@@ -122,9 +129,19 @@ export function DashboardShell({ userEmail }: { userEmail: string }) {
   const activeProject =
     projects.find((project) => project.id === activeProjectId) ?? null;
 
+  const activeEntries = useMemo(
+    () => filterEntriesByArchiveState(entries, false),
+    [entries],
+  );
+  const archivedEntries = useMemo(
+    () => filterEntriesByArchiveState(entries, true),
+    [entries],
+  );
+  const currentEntries =
+    entryView === "active" ? activeEntries : archivedEntries;
   const visibleEntries = useMemo(
-    () => filterEntries(entries, query),
-    [entries, query],
+    () => filterEntries(currentEntries, query),
+    [currentEntries, query],
   );
 
   async function loadProjects() {
@@ -173,6 +190,7 @@ export function DashboardShell({ userEmail }: { userEmail: string }) {
 
   useEffect(() => {
     setQuery("");
+    setEntryView("active");
     setNotice(null);
     void loadEntries(activeProjectId);
   }, [activeProjectId]);
@@ -200,6 +218,25 @@ export function DashboardShell({ userEmail }: { userEmail: string }) {
           : project,
       ),
     );
+  }
+
+  async function restoreEntry(entry: Entry) {
+    setError("");
+
+    try {
+      const data = await requestJson<{ entry: Entry }>(
+        `/api/entries/${entry.id}/archive`,
+        { method: "DELETE" },
+      );
+      setEntries((current) =>
+        current.map((currentEntry) =>
+          currentEntry.id === data.entry.id ? data.entry : currentEntry,
+        ),
+      );
+      updateProjectCount(1);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Restauration impossible.");
+    }
   }
 
   return (
@@ -406,6 +443,37 @@ export function DashboardShell({ userEmail }: { userEmail: string }) {
             </div>
           ) : (
             <>
+              <div className="entry-tabs" role="tablist" aria-label="État des entrées">
+                <button
+                  className="entry-tab"
+                  type="button"
+                  role="tab"
+                  aria-selected={entryView === "active"}
+                  data-active={entryView === "active" || undefined}
+                  onClick={() => {
+                    setEntryView("active");
+                    setQuery("");
+                  }}
+                >
+                  Entrées
+                  <span>{activeEntries.length}</span>
+                </button>
+                <button
+                  className="entry-tab"
+                  type="button"
+                  role="tab"
+                  aria-selected={entryView === "archived"}
+                  data-active={entryView === "archived" || undefined}
+                  onClick={() => {
+                    setEntryView("archived");
+                    setQuery("");
+                  }}
+                >
+                  Archives
+                  <span>{archivedEntries.length}</span>
+                </button>
+              </div>
+
               <div className="toolbar">
                 <label className="search-field">
                   <Search size={17} aria-hidden="true" />
@@ -433,22 +501,32 @@ export function DashboardShell({ userEmail }: { userEmail: string }) {
 
               {loadingEntries ? (
                 <div className="table-skeleton">Chargement des entrées…</div>
-              ) : entries.length === 0 ? (
-                <div className="empty-state empty-state--compact">
-                  <div className="empty-state__icon">
-                    <PackagePlus size={23} />
+              ) : currentEntries.length === 0 ? (
+                entryView === "active" ? (
+                  <div className="empty-state empty-state--compact">
+                    <div className="empty-state__icon">
+                      <PackagePlus size={23} />
+                    </div>
+                    <h2>Aucune boîte enregistrée.</h2>
+                    <p>Démonte, range, ajoute l’entrée, puis note le code sur la boîte.</p>
+                    <button
+                      className="button button--primary"
+                      type="button"
+                      onClick={() => setModal({ type: "new-entry" })}
+                    >
+                      <Plus size={16} />
+                      Ajouter la première
+                    </button>
                   </div>
-                  <h2>Aucune boîte enregistrée.</h2>
-                  <p>Démonte, range, ajoute l’entrée, puis note le code sur la boîte.</p>
-                  <button
-                    className="button button--primary"
-                    type="button"
-                    onClick={() => setModal({ type: "new-entry" })}
-                  >
-                    <Plus size={16} />
-                    Ajouter la première
-                  </button>
-                </div>
+                ) : (
+                  <div className="empty-state empty-state--compact">
+                    <div className="empty-state__icon">
+                      <Archive size={23} />
+                    </div>
+                    <h2>Aucune entrée archivée.</h2>
+                    <p>Les entrées archivées resteront récupérables ici.</p>
+                  </div>
+                )
               ) : visibleEntries.length === 0 ? (
                 <div className="empty-search">
                   Aucun résultat pour « {query} ».
@@ -491,19 +569,46 @@ export function DashboardShell({ userEmail }: { userEmail: string }) {
                             {entry.images.length}
                           </button>
                         ) : null}
-                        <button
-                          className="icon-button"
-                          type="button"
-                          onClick={() => setModal({ type: "edit-entry", entry })}
-                          aria-label={`Modifier ${entry.name}`}
-                        >
-                          <Pencil size={15} />
-                        </button>
+
+                        {entryView === "active" ? (
+                          <>
+                            <button
+                              className="icon-button"
+                              type="button"
+                              onClick={() => setModal({ type: "edit-entry", entry })}
+                              aria-label={`Modifier ${entry.name}`}
+                              title="Modifier"
+                            >
+                              <Pencil size={15} />
+                            </button>
+                            <button
+                              className="icon-button"
+                              type="button"
+                              onClick={() => setModal({ type: "archive-entry", entry })}
+                              aria-label={`Archiver ${entry.name}`}
+                              title="Archiver"
+                            >
+                              <Archive size={15} />
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            className="icon-button"
+                            type="button"
+                            onClick={() => void restoreEntry(entry)}
+                            aria-label={`Restaurer ${entry.name}`}
+                            title="Restaurer"
+                          >
+                            <ArchiveRestore size={15} />
+                          </button>
+                        )}
+
                         <button
                           className="icon-button"
                           type="button"
                           onClick={() => setModal({ type: "delete-entry", entry })}
                           aria-label={`Supprimer ${entry.name}`}
+                          title="Supprimer définitivement"
                         >
                           <Trash2 size={15} />
                         </button>
@@ -605,6 +710,7 @@ export function DashboardShell({ userEmail }: { userEmail: string }) {
               const entry = { ...data.entry, images: uploadedImages };
               setEntries((current) => [entry, ...current]);
               updateProjectCount(1);
+              setEntryView("active");
               setNotice(entry);
               setModal(null);
             } catch (caught) {
@@ -664,11 +770,35 @@ export function DashboardShell({ userEmail }: { userEmail: string }) {
         <GalleryModal entry={modal.entry} onClose={() => setModal(null)} />
       ) : null}
 
+      {modal?.type === "archive-entry" ? (
+        <ConfirmModal
+          title={`Archiver ${modal.entry.code} ?`}
+          body={`L’entrée « ${modal.entry.name} » sera déplacée dans Archives et restera récupérable.`}
+          confirmLabel="Archiver"
+          onClose={() => setModal(null)}
+          onConfirm={async () => {
+            const data = await requestJson<{ entry: Entry }>(
+              `/api/entries/${modal.entry.id}/archive`,
+              { method: "POST" },
+            );
+            setEntries((current) =>
+              current.map((entry) =>
+                entry.id === data.entry.id ? data.entry : entry,
+              ),
+            );
+            if (modal.entry.archivedAt === null) {
+              updateProjectCount(-1);
+            }
+            setModal(null);
+          }}
+        />
+      ) : null}
+
       {modal?.type === "delete-entry" ? (
         <ConfirmModal
           title={`Supprimer ${modal.entry.code} ?`}
-          body={`L’entrée « ${modal.entry.name} » sera supprimée. Le code pourra être réattribué plus tard.`}
-          confirmLabel="Supprimer l’entrée"
+          body={`L’entrée « ${modal.entry.name} » sera supprimée définitivement, avec ses photos. Le code pourra être réattribué plus tard.`}
+          confirmLabel="Supprimer définitivement"
           onClose={() => setModal(null)}
           onConfirm={async () => {
             await requestJson(`/api/entries/${modal.entry.id}`, {
@@ -677,7 +807,9 @@ export function DashboardShell({ userEmail }: { userEmail: string }) {
             setEntries((current) =>
               current.filter((entry) => entry.id !== modal.entry.id),
             );
-            updateProjectCount(-1);
+            if (modal.entry.archivedAt === null) {
+              updateProjectCount(-1);
+            }
             setModal(null);
           }}
         />

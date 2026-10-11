@@ -33,15 +33,17 @@ model Entry {
   code      String   @db.Char(4)
   name      String   @db.VarChar(180)
   quantity  Int      @default(1)
-  notes     String?  @db.Text
-  projectId String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  notes      String?   @db.Text
+  projectId  String
+  archivedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
   project   Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
   images    EntryImage[]
 
   @@unique([projectId, code])
   @@index([projectId, name])
+  @@index([projectId, archivedAt])
 }
 
 model EntryImage {
