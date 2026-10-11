@@ -20,3 +20,16 @@ export function filterEntries<T extends SearchableEntry>(
     );
   });
 }
+
+export type ArchivableEntry = {
+  archivedAt: string | null;
+};
+
+export function filterEntriesByArchiveState<T extends ArchivableEntry>(
+  entries: readonly T[],
+  archived: boolean,
+): T[] {
+  return entries.filter((entry) =>
+    archived ? entry.archivedAt !== null : entry.archivedAt === null,
+  );
+}
