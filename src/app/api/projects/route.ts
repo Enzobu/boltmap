@@ -19,7 +19,11 @@ export async function GET(): Promise<NextResponse> {
       name: true,
       createdAt: true,
       updatedAt: true,
-      _count: { select: { entries: true } },
+      _count: {
+        select: {
+          entries: { where: { archivedAt: null } },
+        },
+      },
     },
   });
 
@@ -50,7 +54,11 @@ export async function POST(request: Request): Promise<NextResponse> {
       name: true,
       createdAt: true,
       updatedAt: true,
-      _count: { select: { entries: true } },
+      _count: {
+        select: {
+          entries: { where: { archivedAt: null } },
+        },
+      },
     },
   });
 
