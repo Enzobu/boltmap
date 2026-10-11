@@ -43,6 +43,7 @@ model Entry {
 
   @@unique([projectId, code])
   @@index([projectId, name])
+  @@index([projectId, archivedAt])
 }
 
 model EntryImage {
