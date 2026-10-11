@@ -1104,3 +1104,54 @@ a {
 .gallery-image {
   cursor: zoom-in;
 }
+
+
+.entry-tabs {
+  display: inline-flex;
+  gap: 3px;
+  margin-bottom: 14px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel-muted);
+}
+
+.entry-tab {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  gap: 7px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.entry-tab:hover {
+  color: var(--text);
+}
+
+.entry-tab[data-active] {
+  background: var(--panel-strong);
+  color: var(--text);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.entry-tab > span {
+  min-width: 21px;
+  padding: 1px 6px;
+  border-radius: 99px;
+  background: var(--panel-muted);
+  color: var(--text-faint);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.entry-tab[data-active] > span {
+  color: var(--text-soft);
+}
