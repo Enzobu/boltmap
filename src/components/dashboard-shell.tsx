@@ -31,7 +31,7 @@ import {
   type ReactNode,
 } from "react";
 import { ThemeSwitch } from "@/components/theme-switch";
-import { filterEntries } from "@/lib/entries";
+import { filterEntries, filterEntriesByArchiveState } from "@/lib/entries";
 
 type Project = {
   id: string;
@@ -130,11 +130,11 @@ export function DashboardShell({ userEmail }: { userEmail: string }) {
     projects.find((project) => project.id === activeProjectId) ?? null;
 
   const activeEntries = useMemo(
-    () => entries.filter((entry) => entry.archivedAt === null),
+    () => filterEntriesByArchiveState(entries, false),
     [entries],
   );
   const archivedEntries = useMemo(
-    () => entries.filter((entry) => entry.archivedAt !== null),
+    () => filterEntriesByArchiveState(entries, true),
     [entries],
   );
   const currentEntries =
@@ -807,7 +807,9 @@ export function DashboardShell({ userEmail }: { userEmail: string }) {
             setEntries((current) =>
               current.filter((entry) => entry.id !== modal.entry.id),
             );
-            updateProjectCount(-1);
+            if (modal.entry.archivedAt === null) {
+              updateProjectCount(-1);
+            }
             setModal(null);
           }}
         />
