@@ -8,6 +8,7 @@ import {
   ChevronRight,
   Clipboard,
   FolderPlus,
+  FileDown,
   Images,
   Camera,
   LogOut,
@@ -493,6 +494,17 @@ export function DashboardShell({ userEmail }: { userEmail: string }) {
                     </button>
                   ) : null}
                 </label>
+                <button
+                  className="button button--quiet"
+                  type="button"
+                  onClick={() => window.print()}
+                  disabled={loadingEntries || visibleEntries.length === 0}
+                  aria-label="Exporter le tableau en PDF"
+                  title="Ouvrir l’impression pour enregistrer en PDF"
+                >
+                  <FileDown size={16} />
+                  Exporter PDF
+                </button>
                 <span className="result-count">
                   {visibleEntries.length}{" "}
                   {visibleEntries.length > 1 ? "entrées" : "entrée"}
@@ -619,6 +631,36 @@ export function DashboardShell({ userEmail }: { userEmail: string }) {
               )}
             </>
           )}
+        </section>
+        <section className="print-report" aria-label="Tableau à exporter en PDF">
+          <div className="print-report__brand">boltmap <span> / INVENTAIRE</span></div>
+          <div className="print-report__heading">
+            <div>
+              <div className="print-report__kicker">Rapport de projet</div>
+              <h1>{activeProject?.name ?? "Projet"}</h1>
+              <p>{entryView === "active" ? "Entrées actives" : "Archives"}{query ? ` · Recherche : ${query}` : ""}</p>
+            </div>
+            <div className="print-report__meta">
+              <strong>{visibleEntries.length}</strong>
+              <span>{visibleEntries.length > 1 ? "entrées" : "entrée"}</span>
+              <small>Édité le {new Date().toLocaleDateString("fr-FR")}</small>
+            </div>
+          </div>
+          <table className="print-report__table">
+            <colgroup><col className="print-report__code" /><col className="print-report__name" /><col className="print-report__qty" /><col /></colgroup>
+            <thead><tr><th>Code</th><th>Pièce / emplacement</th><th>Qté</th><th>Notes</th></tr></thead>
+            <tbody>
+              {visibleEntries.map((entry) => (
+                <tr key={entry.id}>
+                  <td className="print-report__code-value">{entry.code}</td>
+                  <td>{entry.name}</td>
+                  <td className="print-report__quantity">{entry.quantity}</td>
+                  <td>{entry.notes || "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <footer className="print-report__footer">boltmap · Inventaire du projet · Document généré localement</footer>
         </section>
       </main>
 
