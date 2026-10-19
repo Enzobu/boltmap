@@ -9,6 +9,7 @@ import {
   Clipboard,
   FolderPlus,
   FileDown,
+  Download,
   Images,
   Camera,
   LogOut,
@@ -33,6 +34,7 @@ import {
 } from "react";
 import { ThemeSwitch } from "@/components/theme-switch";
 import { filterEntries, filterEntriesByArchiveState } from "@/lib/entries";
+import { downloadEntriesPdf } from "@/lib/pdf-export";
 
 type Project = {
   id: string;
@@ -504,6 +506,22 @@ export function DashboardShell({ userEmail }: { userEmail: string }) {
                 >
                   <FileDown size={16} />
                   Exporter PDF
+                </button>
+                <button
+                  className="button button--quiet"
+                  type="button"
+                  disabled={loadingEntries || visibleEntries.length === 0}
+                  onClick={() => {
+                    try {
+                      downloadEntriesPdf(activeProject.name, entryView, query, visibleEntries);
+                    } catch {
+                      setError("Impossible de télécharger le PDF.");
+                    }
+                  }}
+                  aria-label="Télécharger le tableau en PDF"
+                >
+                  <Download size={16} />
+                  Télécharger
                 </button>
                 <span className="result-count">
                   {visibleEntries.length}{" "}
