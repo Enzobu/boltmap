@@ -41,7 +41,7 @@ model Entry {
   project   Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
   images    EntryImage[]
 
-  @@unique([projectId, code])
+  @@unique([code])
   @@index([projectId, name])
   @@index([projectId, archivedAt])
 }
