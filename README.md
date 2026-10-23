@@ -6,7 +6,7 @@ Boltmap keeps workshop hardware mapped to where it belongs. Put the screws or bo
 
 - Email/password authentication with secure HTTP-only session cookies.
 - Projects with isolated entry lists.
-- Random 4-digit codes from `1000` to `9999`, unique inside each project.
+- Random 4-digit codes from `1000` to `9999`, unique across the entire application (including other projects and users).
 - Entry name, quantity and optional notes.
 - Instant client-side search by code or name, without pagination.
 - Create, rename and delete projects.
@@ -61,7 +61,7 @@ npm run build
 
 - **User** owns projects.
 - **Project** owns entries.
-- **Entry** has a unique `(projectId, code)` constraint.
+- **Entry** has a global unique `code` constraint, including archived entries. There are 9,000 possible codes across the entire database.
 
 Deleting a project cascades to its entries. Deleting a user cascades to their projects.
 
@@ -73,3 +73,16 @@ Deleting a project cascades to its entries. Deleting a user cascades to their pr
 - Do not commit a real `.env` file or production credentials.
 
 Closes are intentionally not automatic: issue lifecycle should be completed only after deployment/acceptance checks.
+
+## Upgrading existing installations
+
+Before deploying the global-uniqueness migration, check whether codes are already duplicated across projects:
+
+```sql
+SELECT code, COUNT(*) AS occurrences
+FROM Entry
+GROUP BY code
+HAVING COUNT(*) > 1;
+```
+
+**Do not automatically rename existing codes:** physical boxes may already be labelled. If the query returns rows, identify the associated entries with `SELECT e.code, e.id, e.name, p.name AS project FROM Entry e JOIN Project p ON p.id = e.projectId WHERE e.code = '1234';` (replace `1234`) and reconcile each duplicate with the physical labels before migration. The new unique-index migration intentionally fails safely until duplicates are resolved. Back up the database before editing existing records. Both active and archived entries retain their reserved codes.
