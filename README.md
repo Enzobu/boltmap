@@ -5,7 +5,8 @@ Boltmap keeps workshop hardware mapped to where it belongs. Put the screws or bo
 ## Features
 
 - Email/password authentication with secure HTTP-only session cookies.
-- Projects with isolated entry lists.
+- Projects with isolated entry lists and a separate documentation section.
+- Project documentation with randomly generated, stable three-letter codes (unique per project), title, notes and up to 10 attached PDF/images. Codes can be written on physical boxes for lookup.
 - Random 4-digit codes from `1000` to `9999`, unique across the entire application (including other projects and users).
 - Entry name, quantity and optional notes.
 - Instant client-side search by code or name within the selected project, without pagination.
@@ -88,3 +89,19 @@ HAVING COUNT(*) > 1;
 ```
 
 **Do not automatically rename existing codes:** physical boxes may already be labelled. If the query returns rows, identify the associated entries with `SELECT e.code, e.id, e.name, p.name AS project FROM Entry e JOIN Project p ON p.id = e.projectId WHERE e.code = '1234';` (replace `1234`) and reconcile each duplicate with the physical labels before migration. The new unique-index migration intentionally fails safely until duplicates are resolved. Back up the database before editing existing records. Both active and archived entries retain their reserved codes.
+
+## Project documentation
+
+Each project has a **Documentation** tab, separate from the four-digit hardware entries.
+Create a document for a diagram, valve layout or reference photo and write its generated
+three-letter code on the physical box. Codes are unique *within* a project (not across all
+projects) and never change when editing a document. Search by code, title or notes within
+that project's documentation section.
+
+Attachments are PDF, JPEG, PNG or WebP, up to 15 MiB each and 10 per document.
+Files use the existing `IMAGE_VOLUME` bind mount (in a `documents/` subfolder)
+and are served only to the project owner. Include this mount in backups.
+
+The database migration creates the `Document` and `DocumentFile` tables. Existing
+four-digit entry codes and project records are unaffected. Deploy the migration
+before starting the application on an existing installation.

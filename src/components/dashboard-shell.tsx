@@ -34,6 +34,7 @@ import {
   type ReactNode,
 } from "react";
 import { ThemeSwitch } from "@/components/theme-switch";
+import { DocumentationSpace } from "@/components/documentation-space";
 import { filterEntries, filterEntriesByArchiveState } from "@/lib/entries";
 import { downloadEntriesPdf } from "@/lib/pdf-export";
 
@@ -124,6 +125,7 @@ export function DashboardShell({ userEmail }: { userEmail: string }) {
   const [activeProjectId, setActiveProjectId] = useState("");
   const [entries, setEntries] = useState<Entry[]>([]);
   const [entryView, setEntryView] = useState<EntryView>("active");
+  const [projectSection, setProjectSection] = useState<"entries" | "documents">("entries");
   const [query, setQuery] = useState("");
   const [loadingProjects, setLoadingProjects] = useState(true);
   const [loadingEntries, setLoadingEntries] = useState(false);
@@ -197,6 +199,7 @@ export function DashboardShell({ userEmail }: { userEmail: string }) {
   useEffect(() => {
     setQuery("");
     setEntryView("active");
+    setProjectSection("entries");
     setNotice(null);
     void loadEntries(activeProjectId);
   }, [activeProjectId]);
@@ -389,7 +392,8 @@ export function DashboardShell({ userEmail }: { userEmail: string }) {
               <button
                 className="button button--primary"
                 type="button"
-                onClick={() => setModal({ type: "new-entry" })}
+                onClick={() => projectSection === "documents" ? setProjectSection("documents") : setModal({ type: "new-entry" })}
+                style={projectSection === "documents" ? { display: "none" } : undefined}
               >
                 <Plus size={16} />
                 <span className="hide-mobile">Ajouter</span>
@@ -455,6 +459,20 @@ export function DashboardShell({ userEmail }: { userEmail: string }) {
             </div>
           ) : (
             <>
+              <div className="project-section-tabs" role="tablist" aria-label="Section du projet">
+                <button className="entry-tab" type="button" role="tab"
+                  aria-selected={projectSection === "entries"}
+                  data-active={projectSection === "entries" || undefined}
+                  onClick={() => setProjectSection("entries")}>Visserie</button>
+                <button className="entry-tab" type="button" role="tab"
+                  aria-selected={projectSection === "documents"}
+                  data-active={projectSection === "documents" || undefined}
+                  onClick={() => setProjectSection("documents")}>Documentation</button>
+              </div>
+              {projectSection === "documents" ? (
+                <DocumentationSpace key={activeProjectId} projectId={activeProjectId} />
+              ) : (
+              <>
               <div className="entry-tabs" role="tablist" aria-label="État des entrées">
                 <button
                   className="entry-tab"
@@ -661,6 +679,8 @@ export function DashboardShell({ userEmail }: { userEmail: string }) {
                     </article>
                   ))}
                 </div>
+              )}
+              </>
               )}
             </>
           )}
