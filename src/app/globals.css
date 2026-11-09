@@ -1255,3 +1255,38 @@ a {
 @media (prefers-reduced-motion: reduce) {
   .reference-detail__photo, .reference-detail__photo img { transition: none; }
 }
+
+
+/* Global reference search */
+.global-search-launch { padding: 4px 10px 12px; border-bottom: 1px solid var(--line); }
+.global-search-launch__button {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 40px;
+  padding: 0 11px; border: 1px solid var(--line); border-radius: 9px;
+  background: var(--panel-strong); color: var(--text-soft); font: inherit;
+  text-align: left; cursor: pointer;
+  transition: border-color 140ms ease, background 140ms ease, color 140ms ease;
+}
+.global-search-launch__button:hover { border-color: var(--accent); background: var(--panel-muted); color: var(--text); }
+.global-search-launch__button:focus-visible, .global-search__result:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+.global-search { display: grid; gap: 13px; }
+.global-search__field { width: 100%; }
+.global-search__results { max-height: min(56dvh, 440px); overflow-y: auto; }
+.global-search__empty { margin: 0; padding: 24px 8px; text-align: center; color: var(--text-soft); }
+.global-search__count { margin: 0 0 8px; color: var(--text-faint); font-size: 12px; }
+.global-search__result {
+  display: flex; width: 100%; align-items: center; gap: 12px; min-height: 64px;
+  padding: 10px 8px; border: 0; border-bottom: 1px solid var(--line);
+  background: transparent; color: var(--text); font: inherit; text-align: left; cursor: pointer;
+}
+.global-search__result:last-child { border-bottom: 0; }
+.global-search__result:hover { background: var(--panel-muted); }
+.global-search__code {
+  flex: 0 0 auto; padding: 5px 7px; border: 1px solid var(--line); border-radius: 7px;
+  background: var(--panel-strong); font: 750 12px ui-monospace, monospace;
+}
+.global-search__info { display: grid; gap: 3px; min-width: 0; flex: 1; }
+.global-search__info strong { overflow-wrap: anywhere; font-size: 13px; }
+.global-search__info small { color: var(--text-soft); overflow-wrap: anywhere; }
+.global-search__result > svg { flex-shrink: 0; color: var(--text-faint); }
