@@ -21,6 +21,7 @@ import {
   Search,
   Trash2,
   ArrowRightLeft,
+  ArrowLeft,
   X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -77,7 +78,7 @@ type ModalState =
   | { type: "new-entry" }
   | { type: "edit-entry"; entry: Entry }
   | { type: "gallery-entry"; entry: Entry }
-  | { type: "details-entry"; entry: Entry }
+  | { type: "details-entry"; entry: Entry; fromGlobalSearch?: boolean }
   | { type: "archive-entry"; entry: Entry }
   | { type: "delete-entry"; entry: Entry }
   | null;
@@ -127,6 +128,7 @@ export function DashboardShell({ userEmail }: { userEmail: string }) {
   const [entryView, setEntryView] = useState<EntryView>("active");
   const [projectSection, setProjectSection] = useState<"entries" | "documents">("entries");
   const [query, setQuery] = useState("");
+  const [globalSearchQuery, setGlobalSearchQuery] = useState("");
   const [loadingProjects, setLoadingProjects] = useState(true);
   const [loadingEntries, setLoadingEntries] = useState(false);
   const [modal, setModal] = useState<ModalState>(null);
@@ -719,10 +721,12 @@ export function DashboardShell({ userEmail }: { userEmail: string }) {
 
       {modal?.type === "global-search" ? (
         <GlobalSearchModal
+          initialQuery={globalSearchQuery}
+          onQueryChange={setGlobalSearchQuery}
           onClose={() => setModal(null)}
           onSelect={(entry) => {
             setActiveProjectId(entry.projectId);
-            setModal({ type: "details-entry", entry });
+            setModal({ type: "details-entry", entry, fromGlobalSearch: true });
           }}
         />
       ) : null}
@@ -875,6 +879,7 @@ export function DashboardShell({ userEmail }: { userEmail: string }) {
         <EntryDetailsModal
           entry={modal.entry}
           projects={projects}
+          onBack={modal.fromGlobalSearch ? () => setModal({ type: "global-search" }) : undefined}
           onClose={() => setModal(null)}
           onDelete={async () => {
             await requestJson(`/api/entries/${modal.entry.id}`, { method: "DELETE" });
@@ -990,11 +995,15 @@ type GlobalSearchResult = {
 function GlobalSearchModal({
   onClose,
   onSelect,
+  initialQuery,
+  onQueryChange,
 }: {
   onClose: () => void;
   onSelect: (entry: Entry) => void;
+  initialQuery: string;
+  onQueryChange: (value: string) => void;
 }) {
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState<GlobalSearchResult[]>([]);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
@@ -1027,6 +1036,7 @@ function GlobalSearchModal({
   }, [query]);
 
   function updateQuery(value: string) {
+    onQueryChange(value);
     setQuery(value);
     setResults([]);
     setPending(Boolean(value.trim()));
@@ -1370,12 +1380,14 @@ function EntryDetailsModal({
   entry,
   projects,
   onClose,
+  onBack,
   onDelete,
   onTransfer,
 }: {
   entry: Entry;
   projects: Project[];
   onClose: () => void;
+  onBack?: () => void;
   onDelete: () => Promise<void>;
   onTransfer: (projectId: string) => Promise<void>;
 }) {
@@ -1402,6 +1414,11 @@ function EntryDetailsModal({
   return (
     <Modal title={`Référence · ${entry.code}`} onClose={pending ? () => undefined : onClose}>
       <div className="modal__body reference-detail">
+        {onBack ? (
+          <button type="button" className="reference-detail__back" onClick={onBack} disabled={pending}>
+            <ArrowLeft size={16} aria-hidden="true" /> Retour à la recherche globale
+          </button>
+        ) : null}
         <div className="reference-detail__heading">
           <span className="reference-detail__code">{entry.code}</span>
           <div><h3>{entry.name}</h3><p>Quantité : {entry.quantity}</p></div>

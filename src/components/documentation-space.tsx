@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
-import { FileText, Plus, Search, Trash2, X, Pencil } from "lucide-react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { FileText, Plus, Search, Trash2, X, Pencil, Upload, FileImage } from "lucide-react";
 
 type DocumentFile = { id: string; name: string; mimeType: string; size: number; position: number };
 type ProjectDocument = {
@@ -133,6 +133,21 @@ function DocumentDialog({
   const [title, setTitle] = useState(document?.title ?? "");
   const [notes, setNotes] = useState(document?.notes ?? "");
   const [files, setFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const remainingSlots = 10 - (document?.files.length ?? 0) - files.length;
+
+  function appendFiles(incoming: FileList | null) {
+    if (!incoming) return;
+    const selected = Array.from(incoming);
+    if (selected.length > remainingSlots) {
+      setError(`Il reste ${remainingSlots} emplacement${remainingSlots > 1 ? "s" : ""} disponible${remainingSlots > 1 ? "s" : ""} (10 fichiers maximum).`);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+    setFiles((current) => [...current, ...selected]);
+    setError("");
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
   const [editing, setEditing] = useState(!document);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [removeFileId, setRemoveFileId] = useState<string | null>(null);
@@ -225,11 +240,39 @@ function DocumentDialog({
                   onChange={(event) => setNotes(event.target.value)}
                   placeholder="Soupapes numérotées de 1 à 16, côté distribution…" />
               </label>
-              <label className="field">
-                <span>Fichiers (PDF, JPEG, PNG, WebP · 15 Mo/fichier · 10 maximum)</span>
-                <input type="file" accept=".pdf,image/jpeg,image/png,image/webp" multiple
-                  onChange={(event) => setFiles(Array.from(event.target.files ?? []))} />
-              </label>
+              <div className="field">
+                <span id="document-file-label">Fichiers <em>PDF, JPEG, PNG, WebP · 15 Mo/fichier · 10 maximum</em></span>
+                <input ref={fileInputRef} className="file-input" type="file"
+                  accept=".pdf,image/jpeg,image/png,image/webp" multiple
+                  aria-labelledby="document-file-label"
+                  onChange={(event) => appendFiles(event.target.files)} />
+                <button type="button" className="document-file-picker" disabled={pending || remainingSlots <= 0}
+                  onClick={() => fileInputRef.current?.click()}>
+                  <span className="document-file-picker__icon"><Upload size={20} aria-hidden="true" /></span>
+                  <span className="document-file-picker__content">
+                    <strong>Choisir des fichiers</strong>
+                    <small>{remainingSlots > 0
+                      ? `${remainingSlots} emplacement${remainingSlots > 1 ? "s" : ""} disponible${remainingSlots > 1 ? "s" : ""}`
+                      : "Limite de 10 fichiers atteinte"}</small>
+                  </span>
+                  <span className="document-file-picker__action">Parcourir</span>
+                </button>
+                {files.length > 0 ? (
+                  <ul className="document-file-picker__list" aria-label="Fichiers sélectionnés">
+                    {files.map((file, index) => (
+                      <li key={`${file.name}-${index}`} className="document-file-picker__item">
+                        {file.type === "application/pdf" ? <FileText size={16} aria-hidden="true" /> : <FileImage size={16} aria-hidden="true" />}
+                        <span title={file.name}>{file.name}</span>
+                        <button type="button" className="icon-button"
+                          aria-label={`Retirer ${file.name}`}
+                          onClick={() => setFiles((current) => current.filter((_, currentIndex) => currentIndex !== index))}>
+                          <X size={15} />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
               {error ? <p className="form-error" role="alert">{error}</p> : null}
               <div className="modal__actions">
                 <button type="button" className="button button--quiet" onClick={document ? () => setEditing(false) : onClose}>Annuler</button>
