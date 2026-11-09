@@ -19,3 +19,7 @@ export const entryPatchSchema = entrySchema.partial().refine(
   (value) => Object.keys(value).length > 0,
   "At least one field is required.",
 );
+
+export const transferEntrySchema = z.object({
+  projectId: z.string().min(1),
+}).strict();
