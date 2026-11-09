@@ -8,7 +8,8 @@ Boltmap keeps workshop hardware mapped to where it belongs. Put the screws or bo
 - Projects with isolated entry lists.
 - Random 4-digit codes from `1000` to `9999`, unique across the entire application (including other projects and users).
 - Entry name, quantity and optional notes.
-- Instant client-side search by code or name, without pagination.
+- Instant client-side search by code or name within the selected project, without pagination.
+- Authenticated global search by code or name across all owned projects, including archived entries, with direct access to reference details (first 100 matches).
 - Create, rename and delete projects.
 - Create, edit and delete entries.
 - Open any reference for its details and photos; zoom photos in place and transfer the reference to another owned project without changing its code, quantity, notes or attachments.

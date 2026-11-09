@@ -69,6 +69,7 @@ type EntryFormPayload = {
 };
 
 type ModalState =
+  | { type: "global-search" }
   | { type: "new-project" }
   | { type: "rename-project"; project: Project }
   | { type: "delete-project"; project: Project }
@@ -263,6 +264,12 @@ export function DashboardShell({ userEmail }: { userEmail: string }) {
             aria-label="Fermer le menu"
           >
             <X size={18} />
+          </button>
+        </div>
+
+        <div className="global-search-launch">
+          <button type="button" className="global-search-launch__button" onClick={() => { setSidebarOpen(false); setModal({ type: "global-search" }); }}>
+            <Search size={16} aria-hidden="true" /> Rechercher partout
           </button>
         </div>
 
@@ -690,6 +697,16 @@ export function DashboardShell({ userEmail }: { userEmail: string }) {
         </section>
       </main>
 
+      {modal?.type === "global-search" ? (
+        <GlobalSearchModal
+          onClose={() => setModal(null)}
+          onSelect={(entry) => {
+            setActiveProjectId(entry.projectId);
+            setModal({ type: "details-entry", entry });
+          }}
+        />
+      ) : null}
+
       {modal?.type === "new-project" ? (
         <ProjectModal
           title="Nouveau projet"
@@ -942,6 +959,114 @@ function Modal({
         {children}
       </section>
     </div>
+  );
+}
+
+type GlobalSearchResult = {
+  entry: Entry;
+  project: { id: string; name: string };
+};
+
+function GlobalSearchModal({
+  onClose,
+  onSelect,
+}: {
+  onClose: () => void;
+  onSelect: (entry: Entry) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<GlobalSearchResult[]>([]);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const normalized = query.trim();
+    if (!normalized) return;
+    const controller = new AbortController();
+    const timeout = window.setTimeout(async () => {
+      setPending(true);
+      setError("");
+      try {
+        const data = await requestJson<{ results: GlobalSearchResult[] }>(
+          `/api/entries/search?q=${encodeURIComponent(normalized)}`,
+          { signal: controller.signal },
+        );
+        if (!controller.signal.aborted) setResults(data.results);
+      } catch (caught) {
+        if (!controller.signal.aborted) {
+          setError(caught instanceof Error ? caught.message : "Recherche impossible.");
+        }
+      } finally {
+        if (!controller.signal.aborted) setPending(false);
+      }
+    }, 250);
+    return () => {
+      window.clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [query]);
+
+  function updateQuery(value: string) {
+    setQuery(value);
+    setResults([]);
+    setPending(Boolean(value.trim()));
+    setError("");
+  }
+
+  return (
+    <Modal title="Recherche globale" onClose={onClose}>
+      <div className="modal__body global-search">
+        <label className="search-field global-search__field">
+          <Search size={17} aria-hidden="true" />
+          <input
+            autoFocus
+            maxLength={180}
+            value={query}
+            onChange={(event) => updateQuery(event.target.value)}
+            placeholder="Code ou nom, tous projets confondus…"
+            aria-label="Rechercher dans tous les projets"
+          />
+          {query ? (
+            <button type="button" aria-label="Effacer la recherche" onClick={() => updateQuery("")}>
+              <X size={15} />
+            </button>
+          ) : null}
+        </label>
+        <div className="global-search__results" role="status" aria-live="polite">
+          {!query.trim() ? (
+            <p className="global-search__empty">Saisis un code ou un nom pour rechercher dans tous tes projets.</p>
+          ) : pending ? (
+            <p className="global-search__empty">Recherche en cours…</p>
+          ) : error ? (
+            <p className="form-error">{error}</p>
+          ) : results.length === 0 ? (
+            <p className="global-search__empty">Aucune référence trouvée.</p>
+          ) : (
+            <>
+              <p className="global-search__count">
+                {results.length} résultat{results.length > 1 ? "s" : ""}
+                {results.length === 100 ? " (100 premiers résultats)" : ""}
+              </p>
+              {results.map(({ entry, project }) => (
+                <button
+                  key={entry.id}
+                  type="button"
+                  className="global-search__result"
+                  onClick={() => onSelect(entry)}
+                >
+                  <span className="global-search__code">{entry.code}</span>
+                  <span className="global-search__info">
+                    <strong>{entry.name}</strong>
+                    <small>{project.name} · ×{entry.quantity}{entry.archivedAt ? " · Archivée" : ""}</small>
+                  </span>
+                  <ChevronRight size={16} aria-hidden="true" />
+                </button>
+              ))}
+            </>
+          )}
+        </div>
+      </div>
+    </Modal>
   );
 }
 
