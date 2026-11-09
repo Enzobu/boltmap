@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { FileText, Image as ImageIcon, Plus, Search, Trash2, X, Pencil, Upload } from "lucide-react";
+import { FileText, Plus, Search, Trash2, X, Pencil } from "lucide-react";
 
 type DocumentFile = { id: string; name: string; mimeType: string; size: number; position: number };
 type ProjectDocument = {
@@ -159,6 +159,8 @@ function DocumentDialog({
         });
         saved.files = uploaded.files;
       }
+      setFiles([]);
+      setEditing(false);
       onSave(saved);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Enregistrement impossible.");
