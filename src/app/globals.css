@@ -1290,3 +1290,71 @@ a {
 .global-search__info strong { overflow-wrap: anywhere; font-size: 13px; }
 .global-search__info small { color: var(--text-soft); overflow-wrap: anywhere; }
 .global-search__result > svg { flex-shrink: 0; color: var(--text-faint); }
+
+
+/* Project documentation */
+.project-section-tabs {
+  display: inline-flex; gap: 3px; margin-bottom: 20px; padding: 4px;
+  border: 1px solid var(--line); border-radius: 11px; background: var(--panel-muted);
+}
+.documentation-space { display: grid; gap: 20px; }
+.documentation-space__toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.documentation-space__search { flex: 1; min-width: min(240px, 100%); }
+.documentation-space__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 270px), 1fr)); gap: 12px; }
+.documentation-card {
+  display: flex; gap: 12px; align-items: center; min-width: 0; min-height: 92px;
+  border: 1px solid var(--line); border-radius: 12px; padding: 15px;
+  background: var(--panel); color: var(--text); font: inherit; text-align: left; cursor: pointer;
+  transition: border-color 150ms ease, transform 150ms ease, box-shadow 150ms ease;
+}
+.documentation-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: var(--shadow); }
+.documentation-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.documentation-card__code {
+  flex: 0 0 auto; display: grid; place-items: center; min-width: 54px; min-height: 46px;
+  padding: 5px; border-radius: 9px; background: var(--accent-soft); color: var(--accent);
+  font: 800 16px ui-monospace, monospace; letter-spacing: .08em;
+}
+.documentation-card__main { display: grid; gap: 6px; min-width: 0; flex: 1; }
+.documentation-card__main strong { font-size: 13px; overflow-wrap: anywhere; }
+.documentation-card__main small { color: var(--text-soft); }
+.documentation-card__thumbnail { width: 46px; height: 46px; border-radius: 8px; object-fit: cover; }
+.documentation-dialog { width: min(580px, 100%); }
+.documentation-dialog__body { display: grid; gap: 16px; max-height: min(78dvh, 760px); overflow-y: auto; }
+.documentation-dialog__code {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-muted);
+}
+.documentation-dialog__code span { font-size: 12px; color: var(--text-soft); }
+.documentation-dialog__code strong { font: 800 24px ui-monospace, monospace; letter-spacing: .12em; }
+.documentation-dialog__title { margin: 0; font-size: 18px; }
+.documentation-dialog__notes { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text-soft); }
+.documentation-dialog__files { display: grid; gap: 10px; }
+.documentation-dialog__files > strong { font-size: 12px; color: var(--text-soft); }
+.documentation-dialog__file {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 10px; min-width: 0;
+  border-bottom: 1px solid var(--line); padding: 8px 0;
+}
+.documentation-dialog__preview {
+  display: block; width: 76px; height: 76px; padding: 0;
+  overflow: hidden; border: 1px solid var(--line); border-radius: 9px;
+  background: var(--panel-muted); cursor: zoom-in;
+  transition: width 280ms ease, height 280ms ease, box-shadow 280ms ease;
+}
+.documentation-dialog__preview[data-zoomed] { width: 100%; height: min(45dvh, 420px); cursor: zoom-out; box-shadow: var(--shadow); }
+.documentation-dialog__preview img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.documentation-dialog__pdf {
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 11px;
+  border: 1px solid var(--line); border-radius: 8px; text-decoration: none;
+  color: var(--accent); background: var(--panel-muted);
+}
+.documentation-dialog__filename { flex: 1; min-width: 100px; overflow-wrap: anywhere; font-size: 12px; color: var(--text-soft); }
+.documentation-dialog__confirm { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 9px; }
+.documentation-dialog__confirm p { width: 100%; margin: 0; }
+.documentation-dialog__actions { justify-content: space-between; flex-wrap: wrap; }
+@media (max-width: 560px) {
+  .documentation-space__toolbar { align-items: stretch; flex-direction: column; }
+  .documentation-space__toolbar > button { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .documentation-card, .documentation-dialog__preview { transition: none; }
+}
