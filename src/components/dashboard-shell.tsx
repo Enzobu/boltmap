@@ -20,6 +20,7 @@ import {
   Plus,
   Search,
   Trash2,
+  ArrowRightLeft,
   X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -74,6 +75,7 @@ type ModalState =
   | { type: "new-entry" }
   | { type: "edit-entry"; entry: Entry }
   | { type: "gallery-entry"; entry: Entry }
+  | { type: "details-entry"; entry: Entry }
   | { type: "archive-entry"; entry: Entry }
   | { type: "delete-entry"; entry: Entry }
   | null;
@@ -574,6 +576,12 @@ export function DashboardShell({ userEmail }: { userEmail: string }) {
                   {visibleEntries.map((entry) => (
                     <article className="entry-row" key={entry.id}>
                       <button
+                        className="entry-row__open"
+                        type="button"
+                        aria-label={`Voir les détails de ${entry.name}, code ${entry.code}`}
+                        onClick={() => setModal({ type: "details-entry", entry })}
+                      />
+                      <button
                         className="code-chip"
                         type="button"
                         onClick={() => void copyCode(entry.code)}
@@ -821,6 +829,30 @@ export function DashboardShell({ userEmail }: { userEmail: string }) {
                 currentEntry.id === entry.id ? entry : currentEntry,
               ),
             );
+            setModal(null);
+          }}
+        />
+      ) : null}
+
+      {modal?.type === "details-entry" ? (
+        <EntryDetailsModal
+          entry={modal.entry}
+          projects={projects}
+          onClose={() => setModal(null)}
+          onDelete={async () => {
+            await requestJson(`/api/entries/${modal.entry.id}`, { method: "DELETE" });
+            setEntries((current) => current.filter((item) => item.id !== modal.entry.id));
+            await loadProjects();
+            setModal(null);
+          }}
+          onTransfer={async (projectId) => {
+            await requestJson(`/api/entries/${modal.entry.id}/transfer`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ projectId }),
+            });
+            setEntries((current) => current.filter((item) => item.id !== modal.entry.id));
+            await loadProjects();
             setModal(null);
           }}
         />
@@ -1185,6 +1217,134 @@ function EntryModal({
           </button>
         </div>
       </form>
+    </Modal>
+  );
+}
+
+function EntryDetailsModal({
+  entry,
+  projects,
+  onClose,
+  onDelete,
+  onTransfer,
+}: {
+  entry: Entry;
+  projects: Project[];
+  onClose: () => void;
+  onDelete: () => Promise<void>;
+  onTransfer: (projectId: string) => Promise<void>;
+}) {
+  const [step, setStep] = useState<"details" | "transfer" | "confirm-transfer" | "confirm-delete">("details");
+  const [targetId, setTargetId] = useState("");
+  const [zoomedId, setZoomedId] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState("");
+  const destinations = projects.filter((project) => project.id !== entry.projectId);
+  const destination = destinations.find((project) => project.id === targetId);
+
+  async function confirmAction() {
+    setPending(true);
+    setError("");
+    try {
+      if (step === "confirm-delete") await onDelete();
+      if (step === "confirm-transfer" && destination) await onTransfer(destination.id);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Action impossible.");
+      setPending(false);
+    }
+  }
+
+  return (
+    <Modal title={`Référence · ${entry.code}`} onClose={pending ? () => undefined : onClose}>
+      <div className="modal__body reference-detail">
+        <div className="reference-detail__heading">
+          <span className="reference-detail__code">{entry.code}</span>
+          <div><h3>{entry.name}</h3><p>Quantité : {entry.quantity}</p></div>
+        </div>
+        <div className="reference-detail__section">
+          <strong>Notes</strong>
+          <p>{entry.notes || "Aucune note pour cette référence."}</p>
+        </div>
+        {entry.images.length > 0 ? (
+          <div className="reference-detail__section">
+            <strong>Photos · {entry.images.length}</strong>
+            <div className="reference-detail__photos">
+              {entry.images.map((image, index) => (
+                <button
+                  key={image.id}
+                  type="button"
+                  aria-label={zoomedId === image.id ? `Réduire la photo ${index + 1}` : `Agrandir la photo ${index + 1}`}
+                  aria-pressed={zoomedId === image.id}
+                  className="reference-detail__photo"
+                  data-zoomed={zoomedId === image.id || undefined}
+                  onClick={() => setZoomedId((current) => current === image.id ? null : image.id)}
+                >
+                  <img src={`/api/images/${image.id}`} alt={`Photo ${index + 1} de ${entry.name}`} />
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
+        {step === "transfer" || step === "confirm-transfer" ? (
+          <label className="field reference-detail__destination">
+            <span>Projet de destination</span>
+            <select
+              value={targetId}
+              onChange={(event) => { setTargetId(event.target.value); setStep("transfer"); }}
+              disabled={pending}
+            >
+              <option value="">Choisir un projet…</option>
+              {destinations.map((project) => (
+                <option key={project.id} value={project.id}>{project.name}</option>
+              ))}
+            </select>
+          </label>
+        ) : null}
+        {step === "confirm-transfer" && destination ? (
+          <p className="reference-detail__warning">
+            Confirmer le transfert de la référence {entry.code} vers « {destination.name} » ?
+            Son code, ses notes, sa quantité et ses photos seront conservés.
+          </p>
+        ) : null}
+        {step === "confirm-delete" ? (
+          <p className="reference-detail__warning">
+            Supprimer définitivement la référence {entry.code} et toutes ses photos ?
+            Cette action est irréversible.
+          </p>
+        ) : null}
+        {error ? <p role="alert" className="form-error">{error}</p> : null}
+        <div className="modal__actions reference-detail__actions">
+          {step === "details" ? (
+            <>
+              <button className="button button--danger" type="button" onClick={() => setStep("confirm-delete")}>
+                <Trash2 size={15} /> Supprimer
+              </button>
+              <button className="button button--primary" type="button" disabled={destinations.length === 0}
+                title={destinations.length === 0 ? "Créez un autre projet pour transférer" : undefined}
+                onClick={() => setStep("transfer")}>
+                <ArrowRightLeft size={15} /> Transférer
+              </button>
+            </>
+          ) : (
+            <>
+              <button className="button button--quiet" type="button" disabled={pending}
+                onClick={() => { setStep(step === "confirm-transfer" ? "transfer" : "details"); setError(""); }}>
+                Retour
+              </button>
+              {step === "transfer" ? (
+                <button className="button button--primary" type="button" disabled={!destination}
+                  onClick={() => setStep("confirm-transfer")}>Transférer</button>
+              ) : (
+                <button className={step === "confirm-delete" ? "button button--danger" : "button button--primary"}
+                  type="button" disabled={pending || (step === "confirm-transfer" && !destination)}
+                  onClick={() => void confirmAction()}>
+                  {pending ? "Traitement…" : step === "confirm-delete" ? "Confirmer la suppression" : "Confirmer le transfert"}
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      </div>
     </Modal>
   );
 }

@@ -11,6 +11,7 @@ Boltmap keeps workshop hardware mapped to where it belongs. Put the screws or bo
 - Instant client-side search by code or name, without pagination.
 - Create, rename and delete projects.
 - Create, edit and delete entries.
+- Open any reference for its details and photos; zoom photos in place and transfer the reference to another owned project without changing its code, quantity, notes or attachments.
 - Responsive mobile-first interface.
 - Light, dark and system themes with a persistent 3-way theme control.
 - MariaDB persistence through Prisma.
