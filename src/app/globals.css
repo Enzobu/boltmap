@@ -1221,12 +1221,12 @@ a {
 .reference-detail__section { display: grid; gap: 9px; min-width: 0; }
 .reference-detail__section > strong { color: var(--text-soft); font-size: 12px; }
 .reference-detail__section > p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
-.reference-detail__photos { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 9px; }
+.reference-detail__photos { display: flex; flex-wrap: wrap; gap: 9px; }
 .reference-detail__photo {
-  grid-column: span 1; width: 100%; padding: 0; overflow: hidden;
+  flex: 0 0 calc((100% - 18px) / 3); width: calc((100% - 18px) / 3); padding: 0; overflow: hidden;
   aspect-ratio: 1; border: 1px solid var(--line); border-radius: 10px;
   background: var(--panel-muted); cursor: zoom-in;
-  transition: border-color 220ms ease, box-shadow 220ms ease;
+  transition: flex-basis 320ms ease, height 320ms ease, border-color 220ms ease, box-shadow 220ms ease;
 }
 .reference-detail__photo img {
   display: block; width: 100%; height: 100%; object-fit: cover;
@@ -1234,7 +1234,7 @@ a {
 }
 .reference-detail__photo:hover { border-color: var(--accent); }
 .reference-detail__photo[data-zoomed] {
-  grid-column: 1 / -1; aspect-ratio: auto;
+  flex-basis: 100%; aspect-ratio: auto;
   height: min(50dvh, 420px); cursor: zoom-out;
   box-shadow: var(--shadow);
 }
